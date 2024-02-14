@@ -64,6 +64,7 @@ begin{
 process{
     Write-Host "Waiting for patient '$PatientId' in facility '$FacilityId' to have a status: $($ExitStatus -join ', ')"
     $oldStatus = Get-PeaceHealthPatientStatus -FacilityId $FacilityId -PatientId $PatientId -StatusLegend $statusLegend
+    $oldStatus | Out-String | Write-Host
     while($true){
         $status = Get-PeaceHealthPatientStatus -FacilityId $FacilityId -PatientId $PatientId -StatusLegend $statusLegend
         if($ReportChanges){
@@ -92,16 +93,20 @@ process{
 end{}
 }
 
-function Find-PeaceHealthPatient{
+function Get-PeaceHealthFacilities{
     $response = iwr -Method get -Uri 'https://app.peacehealth.org/SmarTrack'
-    $facility = $response.ParsedHtml.getElementsByTagName('a') | 
+    $response.ParsedHtml.getElementsByTagName('a') | 
         ?{$_.href -imatch 'FacilityID='} |
         %{
             [pscustomobject]@{
                 Name = $_.InnerText;
                 Id = ($_.href -split 'FacilityID=')[-1];
             }
-         } |
+         }
+}
+
+function Find-PeaceHealthPatient{
+    $facility = Get-PeaceHealthFacilities|
          Out-GridView -Title 'What Facility Are they in?' -OutputMode Single
     $patient = Get-PeaceHealthPatientStatus -FacilityId $facility.Id |
         Out-GridView -Title 'Which of these seems like the correct patient?' -OutputMode Single
