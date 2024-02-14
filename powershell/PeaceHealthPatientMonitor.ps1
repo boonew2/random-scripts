@@ -71,7 +71,7 @@ process{
             $changes = @()
             foreach($prop in $properties){
                 if($oldStatus."$prop" -ne $status."$prop"){
-                    $changes += [pscustomobject]@{Property = $prop; OldValue = $oldStatus."$prop"; NewValue = $newStatus."$prop"}
+                    $changes += [pscustomobject]@{Property = $prop; OldValue = $oldStatus."$prop"; NewValue = $status."$prop"}
                 }
             }
             if($changes -and $Beep){ [console]::beep(500, 300) }
