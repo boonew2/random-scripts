@@ -1,3 +1,16 @@
+<# Usage
+    # Scrapes part of the peacehealth smartrack site and backing api
+    # to poll for changes in a patient status. If facility/patient id are known they
+    # can pass directly to Wait-PeaceHealthPatientStatus; else Find-PeaceHealthPatient
+    # can be used to locate patients currently in the system and you can guess the patient
+    # id based on circumstantial properties in the available response
+    Find-PeaceHealthPatient | Wait-PeaceHealthPatientStatus -ReportChanges -Beep
+ 
+#>
+
+# Fetches the Status legend from the site because they don't return the status as part of the exposed api.
+# Instead the api returns colors for background and font and the user decodes the status based on that visually
+# on the site.. a real weird choice
 function Get-PeaceHealthPatientStatusLegend{
     $url = 'https://app.peacehealth.org/SmarTrack/View.aspx?FacilityID=0&PatientID=0'
     $response = iwr -Method get -Uri $url
@@ -7,12 +20,13 @@ function Get-PeaceHealthPatientStatusLegend{
         $legend += [pscustomobject]@{
             ForegroundColor = $tr.style.color
             BackgroundColor = $tr.style.backgroundColor
-            Status = $tr.innerText
+            Status = $tr.innerText.Trim()
         }
     }
     return $legend
 }
 
+# fetches a specific patient status or all at a specified facility
 function Get-PeaceHealthPatientStatus{
 param(
     [parameter(Mandatory=$true)]
@@ -42,6 +56,8 @@ param(
     }
 }
 
+# polls for changes on a patient's status. By default Case Complete is treated as an exit condition.
+# Get-PeaceHealthPatientStatusLegend can be checked for valid statuses
 function Wait-PeaceHealthPatientStatus{
 param(
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true)]
@@ -93,6 +109,8 @@ process{
 end{}
 }
 
+# gets the available facilities for this system.
+# best i could tell there wasn't an api for this so this just scrapes the html
 function Get-PeaceHealthFacilities{
     $response = iwr -Method get -Uri 'https://app.peacehealth.org/SmarTrack'
     $response.ParsedHtml.getElementsByTagName('a') | 
@@ -105,6 +123,8 @@ function Get-PeaceHealthFacilities{
          }
 }
 
+# displays the existing facilities and patients with available information from the site/api
+# in an interactive menu. Can be piped directly to Wait-PeaceHealthPatientStatus
 function Find-PeaceHealthPatient{
     $facility = Get-PeaceHealthFacilities |
          Out-GridView -Title 'What Facility Are they in?' -OutputMode Single
@@ -113,7 +133,3 @@ function Find-PeaceHealthPatient{
         Out-GridView -Title 'Which of these seems like the correct patient?' -OutputMode Single
     return [pscustomobject]@{FacilityId = $facility.Id; PatientId = $patient.PatientId}
 }
-
-<# Usage
-Find-PeaceHealthPatient | Wait-PeaceHealthPatientStatus -ReportChanges -Beep
- #>
