@@ -106,9 +106,10 @@ function Get-PeaceHealthFacilities{
 }
 
 function Find-PeaceHealthPatient{
-    $facility = Get-PeaceHealthFacilities|
+    $facility = Get-PeaceHealthFacilities |
          Out-GridView -Title 'What Facility Are they in?' -OutputMode Single
     $patient = Get-PeaceHealthPatientStatus -FacilityId $facility.Id |
+        Sort-Object -Property Status,Surgeon,LocationId -Descending |
         Out-GridView -Title 'Which of these seems like the correct patient?' -OutputMode Single
     return [pscustomobject]@{FacilityId = $facility.Id; PatientId = $patient.PatientId}
 }
